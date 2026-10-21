@@ -424,6 +424,23 @@ section,.hero{overflow-x:clip}
 footer{background:var(--ink);color:rgba(250,242,221,.7);padding-block:40px;font-size:.875rem}
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:center}
 footer .mark{color:var(--cream)}
+
+/* ===== Gallery slider ===== */
+.gallery .sec-head{margin-bottom:clamp(28px,4vw,44px)}
+.g-track{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;padding-bottom:6px}
+.g-track::-webkit-scrollbar{display:none}
+.g-slide{position:relative;flex:0 0 100%;margin:0;aspect-ratio:3/2;border-radius:22px;overflow:hidden;scroll-snap-align:center;box-shadow:var(--sh-2);background:var(--stone)}
+.g-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.g-slide::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(180deg,transparent,rgba(46,40,64,.6));pointer-events:none}
+.g-slide figcaption{position:absolute;left:clamp(18px,3vw,32px);bottom:clamp(14px,2.5vw,26px);z-index:1;font-family:var(--display);font-style:italic;font-size:clamp(1.1rem,2.2vw,1.5rem);color:var(--cream);text-shadow:0 2px 12px rgba(0,0,0,.35)}
+.g-ctrl{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px}
+.g-dots{display:flex;gap:10px}
+.g-dots button{width:9px;height:9px;padding:0;border-radius:50%;border:1px solid var(--indigo);background:transparent;cursor:pointer;transition:background .25s,transform .25s}
+.g-dots button[aria-current="true"]{background:var(--indigo);transform:scale(1.2)}
+.g-arrows{display:flex;gap:10px}
+.g-arrows button{width:46px;height:46px;border-radius:50%;border:1px solid var(--indigo);background:transparent;color:var(--indigo);font-size:1.1rem;cursor:pointer;transition:background .25s,color .25s}
+.g-arrows button:hover{background:var(--indigo);color:var(--cream)}
+@media (min-width:761px){.g-slide{flex-basis:78%}}
 </style>
 </head>
 <body>
@@ -679,6 +696,26 @@ footer .mark{color:var(--cream)}
   </div>
 </section>
 
+<section class="gallery" id="gallery">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">The experience</p>
+      <h2>Moments from the retreat</h2>
+    </div>
+    <div class="g-track" id="g-track" aria-label="Retreat photos">
+      <figure class="g-slide"><img src="slide1.jpg" alt="Stillness in the sanctuary" width="1536" height="1024" loading="lazy"><figcaption>Stillness in the sanctuary</figcaption></figure>
+      <figure class="g-slide"><img src="slide2.jpg" alt="Sound healing with singing bowls" width="1536" height="1024" loading="lazy"><figcaption>Sound healing with singing bowls</figcaption></figure>
+      <figure class="g-slide"><img src="slide3.jpg" alt="A nourishing Ayurvedic lunch" width="1536" height="1024" loading="lazy"><figcaption>A nourishing Ayurvedic lunch</figcaption></figure>
+      <figure class="g-slide"><img src="slide4.jpg" alt="Gentle yoga in the morning light" width="1536" height="1024" loading="lazy"><figcaption>Gentle yoga in the morning light</figcaption></figure>
+      <figure class="g-slide"><img src="slide5.jpg" alt="Art therapy by the window" width="1536" height="1024" loading="lazy"><figcaption>Art therapy by the window</figcaption></figure>
+    </div>
+    <div class="g-ctrl">
+      <div class="g-dots" id="g-dots"></div>
+      <div class="g-arrows"><button type="button" id="g-prev" aria-label="Previous photo">&larr;</button><button type="button" id="g-next" aria-label="Next photo">&rarr;</button></div>
+    </div>
+  </div>
+</section>
+
 <section id="book">
   <div class="wrap book-grid">
     <div class="card">
@@ -762,6 +799,17 @@ footer .mark{color:var(--cream)}
   const ns="http://www.w3.org/2000/svg";
   function ring(id,r,d,n,off){const g=document.getElementById(id);for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+off;const c=document.createElementNS(ns,"circle");c.setAttribute("cx",200+Math.cos(a)*d);c.setAttribute("cy",200+Math.sin(a)*d);c.setAttribute("r",r);g.appendChild(c);}}
   ring("petals",62,62,6,0);ring("petals",62,0,1,0);ring("petals2",62,107,6,Math.PI/6);ring("petals2",124,0,1,0);
+
+  // Gallery slider: scroll-snap track with arrows, dots and gentle autoplay
+  const gt=document.getElementById("g-track"),gs=[...gt.children],gd=document.getElementById("g-dots");let gi=0,gtimer;
+  const go=i=>{gi=(i+gs.length)%gs.length;gt.scrollTo({left:gs[gi].offsetLeft-(gt.clientWidth-gs[gi].clientWidth)/2,behavior:"smooth"});};
+  gs.forEach((_,i)=>{const b=document.createElement("button");b.type="button";b.setAttribute("aria-label","Photo "+(i+1));b.addEventListener("click",()=>go(i));gd.appendChild(b);});
+  const mark=()=>{const c=gt.scrollLeft+gt.clientWidth/2;gi=gs.reduce((best,el,i)=>Math.abs(el.offsetLeft+el.clientWidth/2-c)<Math.abs(gs[best].offsetLeft+gs[best].clientWidth/2-c)?i:best,0);[...gd.children].forEach((b,i)=>b.setAttribute("aria-current",i===gi));};
+  gt.addEventListener("scroll",()=>{clearTimeout(gt._t);gt._t=setTimeout(mark,80);});mark();
+  document.getElementById("g-prev").addEventListener("click",()=>go(gi-1));
+  document.getElementById("g-next").addEventListener("click",()=>go(gi+1));
+  const play=()=>{if(!matchMedia("(prefers-reduced-motion:reduce)").matches){clearInterval(gtimer);gtimer=setInterval(()=>go(gi+1),5000);}};
+  gt.parentElement.addEventListener("mouseenter",()=>clearInterval(gtimer));gt.parentElement.addEventListener("mouseleave",play);gt.addEventListener("touchstart",()=>clearInterval(gtimer),{passive:true});play();
 
   const M=[
     ["VedaPulse diagnostics","Insight","A pulse reading that shows the current state of your body and doshas."],

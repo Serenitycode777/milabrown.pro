@@ -66,6 +66,22 @@ main{padding-block:clamp(36px,6vw,64px)}
 .status input{width:18px;height:18px;accent-color:var(--lagoon);cursor:pointer}
 .empty{text-align:center;color:var(--ink-soft);padding:40px 0}
 .count{font-size:.875rem;color:var(--ink-soft)}
+.tabs{display:flex;gap:26px;border-bottom:1px solid var(--stone);margin-bottom:clamp(24px,4vw,36px)}
+.tab{font:500 .8125rem var(--body);letter-spacing:.18em;text-transform:uppercase;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:12px 2px;color:var(--ink-soft);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--indigo);border-bottom-color:var(--indigo)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pills span{font-size:.8125rem;padding:4px 12px;border-radius:999px;background:var(--mist);border:1px solid var(--stone);color:var(--ink)}
+.notes{margin:0;padding:14px 16px;background:var(--cream);border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9375rem}
+.notes b{display:block;font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mauve);font-weight:500;margin-bottom:4px}
+.editor{margin-bottom:18px;scroll-margin-top:90px}
+.editor .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.field select,.field textarea{font:inherit;font-weight:400;color:var(--ink);background:var(--mist);border:1px solid var(--stone);border-radius:12px;padding:13px 14px;width:100%}
+.field textarea{min-height:160px;resize:vertical}
+.field select:focus,.field textarea:focus{outline:2px solid var(--aqua);outline-offset:1px}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 18px;margin:0;padding:0;border:0}
+.checks label{display:flex;align-items:center;gap:10px;font-size:.9375rem;cursor:pointer}
+.checks input{width:18px;height:18px;accent-color:var(--lagoon);flex:none}
 </style>
 </head>
 <body>
@@ -86,7 +102,13 @@ main{padding-block:clamp(36px,6vw,64px)}
     <button class="btn" id="l-btn" type="submit">Sign in</button>
   </form>
 
-  <section id="admin" hidden>
+  <div id="admin" hidden>
+  <div class="tabs" role="tablist">
+    <button class="tab" type="button" role="tab" data-view="v-inq" aria-selected="true">Inquiries</button>
+    <button class="tab" type="button" role="tab" data-view="v-cli" aria-selected="false">Clients</button>
+  </div>
+
+  <section id="v-inq">
     <div class="head">
       <div>
         <p class="eyebrow">Booking requests</p>
@@ -104,14 +126,56 @@ main{padding-block:clamp(36px,6vw,64px)}
     <p class="msg" id="a-msg" hidden></p>
     <div class="list" id="list"></div>
   </section>
+
+  <section id="v-cli" hidden>
+    <div class="head">
+      <div>
+        <p class="eyebrow">Retreat guests</p>
+        <h1>Clients</h1>
+        <p class="count" id="c-count"></p>
+      </div>
+      <div class="tools">
+        <button class="chip" type="button" data-cf="upcoming" aria-pressed="false">Upcoming</button>
+        <button class="chip" type="button" data-cf="past" aria-pressed="false">Past</button>
+        <button class="chip" type="button" data-cf="all" aria-pressed="true">All</button>
+        <input class="search" id="c-q" type="search" placeholder="Search clients…" aria-label="Search clients">
+        <button class="btn sm" id="c-add" type="button">Add client</button>
+        <button class="btn ghost sm" id="c-reload" type="button">Refresh</button>
+      </div>
+    </div>
+
+    <form class="card editor" id="c-form" hidden novalidate>
+      <h2 id="c-title">New client</h2>
+      <div class="row2">
+        <div class="field"><label for="c-name">Name</label><input id="c-name" required></div>
+        <div class="field"><label for="c-date">Retreat date</label><input id="c-date" type="date"></div>
+        <div class="field"><label for="c-email">Email</label><input id="c-email" type="email"></div>
+        <div class="field"><label for="c-phone">Phone</label><input id="c-phone" type="tel"></div>
+        <div class="field"><label for="c-format">Format</label>
+          <select id="c-format"><option value="">Not set</option><option>Half-day Reset</option><option>Full-day Immersion</option><option>VIP: Full-day + Support</option></select>
+        </div>
+      </div>
+      <fieldset style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0;margin-bottom:10px;font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mauve);font-weight:500">Chosen modalities</legend>
+        <div class="checks" id="c-mods"></div>
+      </fieldset>
+      <div class="field"><label for="c-notes">Program &amp; notes</label><textarea id="c-notes" placeholder="Schedule, program, preferences, health notes…"></textarea></div>
+      <p class="msg" id="c-msg" hidden></p>
+      <div class="actions"><button class="btn" id="c-save" type="submit">Save client</button><button class="btn ghost" id="c-cancel" type="button">Cancel</button></div>
+    </form>
+
+    <p class="msg" id="c-amsg" hidden></p>
+    <div class="list" id="c-list"></div>
+  </section>
+  </div>
 </main>
 
 <script>
 (function(){
   // Publishable key is public by design; row level security decides what a signed-in user may see.
-  const SB_URL="https://sldavkemqnsruvgghnbm.supabase.co",SB_KEY="sb_publishable_CqLtNh6mFW-VVRP0P23_jA_D-UUrkVr",TABLE="inquiries",STORE="mb-admin-session";
+  const SB_URL="https://sldavkemqnsruvgghnbm.supabase.co",SB_KEY="sb_publishable_CqLtNh6mFW-VVRP0P23_jA_D-UUrkVr",TABLE="inquiries",CLIENTS="milabrown",STORE="mb-admin-session";
+  const MODS=["VedaPulse diagnostics","Vedic Astrology (Jyotish)","Coaching & mastermind","Ayurveda","Kundalini Yoga","Sadhu Board","Amethyst Mat + Photon Therapy","Infrared Sauna","Breathwork & pranayama","Meditation","Sound Healing Bath","Aromatherapy","Nature Bathing","Sacred Geometry art"];
   const $=id=>document.getElementById(id);
-  let session=null,rows=[],filter="new";
+  let session=null,rows=[],filter="new",clients=[],cfilter="all",editing=null,fromInquiry=null;
 
   const load=()=>{try{return JSON.parse(localStorage.getItem(STORE));}catch(e){return null;}};
   const save=s=>{session=s;try{s?localStorage.setItem(STORE,JSON.stringify(s)):localStorage.removeItem(STORE);}catch(e){}};
@@ -136,7 +200,7 @@ main{padding-block:clamp(36px,6vw,64px)}
     return r.status===204?null:r.json();
   }
 
-  function show(inside){$("login").hidden=inside;$("admin").hidden=!inside;$("out").hidden=!inside;if(inside)fetchRows();}
+  function show(inside){$("login").hidden=inside;$("admin").hidden=!inside;$("out").hidden=!inside;if(inside){fetchRows();fetchClients();}}
 
   $("login").addEventListener("submit",async e=>{e.preventDefault();
     const m=$("l-msg"),b=$("l-btn");m.hidden=true;b.disabled=true;b.textContent="Signing in…";
@@ -145,7 +209,7 @@ main{padding-block:clamp(36px,6vw,64px)}
     b.disabled=false;b.textContent="Sign in";});
 
   $("out").addEventListener("click",async()=>{
-    const t=session&&session.access_token;save(null);rows=[];$("list").replaceChildren();show(false);
+    const t=session&&session.access_token;save(null);rows=[];clients=[];$("list").replaceChildren();$("c-list").replaceChildren();closeEditor();show(false);
     if(t)fetch(SB_URL+"/auth/v1/logout",{method:"POST",headers:{"apikey":SB_KEY,"Authorization":"Bearer "+t}}).catch(()=>{});});
 
   async function fetchRows(){
@@ -184,16 +248,105 @@ main{padding-block:clamp(36px,6vw,64px)}
         cb.addEventListener("change",async()=>{cb.disabled=true;
           try{await api(TABLE+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:cb.checked})});r.contacted=cb.checked;render();}
           catch(x){cb.checked=!cb.checked;cb.disabled=false;alert("Couldn't update: "+x.message);}});
-        lab.append(cb,document.createTextNode("Contacted"));card.append(lab);
+        lab.append(cb,document.createTextNode("Contacted"));
+        const row=el("div","actions");row.append(lab);card.append(row);
       }
+      const conf=el("button","btn ghost sm","Confirm as client");conf.type="button";conf.style.justifySelf="start";
+      conf.addEventListener("click",()=>{openTab("v-cli");openEditor(null,r);});
+      card.append(conf);
       list.append(card);
     });
   }
 
-  document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
-    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed","true");filter=c.dataset.f;render();}));
+  document.querySelectorAll(".chip[data-f]").forEach(c=>c.addEventListener("click",()=>{
+    document.querySelectorAll(".chip[data-f]").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed","true");filter=c.dataset.f;render();}));
   $("q").addEventListener("input",render);
   $("reload").addEventListener("click",fetchRows);
+
+  // Tabs: Inquiries / Clients
+  function openTab(id){document.querySelectorAll(".tab").forEach(t=>{const on=t.dataset.view===id;t.setAttribute("aria-selected",on);$(t.dataset.view).hidden=!on;});}
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>openTab(t.dataset.view)));
+
+  // Clients: confirmed retreat guests in the "milabrown" table
+  const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+  const fmtDay=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(v||"");return m?new Date(+m[1],m[2]-1,+m[3]).toLocaleDateString([], {weekday:"short",month:"short",day:"numeric",year:"numeric"}):"";};
+  const splitMods=v=>(v||"").split(",").map(x=>x.trim()).filter(Boolean);
+
+  async function fetchClients(){
+    const m=$("c-amsg");m.hidden=true;$("c-count").textContent="Loading…";
+    try{
+      try{clients=await api(CLIENTS+"?select=*&order=retreat_date.desc.nullsfirst,created_at.desc");}
+      catch(x){if(/signed out/.test(x.message))throw x;clients=(await api(CLIENTS+"?select=*")).reverse();}
+      renderClients();
+    }catch(x){if(!/signed out/.test(x.message)){m.textContent="Couldn't load clients: "+x.message;m.hidden=false;$("c-count").textContent="";}}
+  }
+
+  function renderClients(){
+    const q=$("c-q").value.trim().toLowerCase(),list=$("c-list"),t=today();
+    const up=c=>!c.retreat_date||c.retreat_date>=t;
+    const shown=clients.filter(c=>(cfilter==="all"||(cfilter==="upcoming")===up(c))&&(!q||[c.name,c.email,c.phone,c.format,c.modalities,c.notes].join(" ").toLowerCase().includes(q)));
+    $("c-count").textContent=clients.length+" total · "+clients.filter(up).length+" upcoming";
+    list.replaceChildren();
+    if(!shown.length){list.append(el("p","empty",clients.length?"Nothing here.":"No clients yet. Add one, or confirm an inquiry."));return;}
+    shown.forEach(c=>{
+      const card=el("article","inq"+(up(c)?"":" done"));
+      const top=el("div","inq-top");top.append(el("h2",null,c.name||"(no name)"),el("span","when",c.retreat_date?fmtDay(c.retreat_date):"Date not set"));card.append(top);
+      const dl=el("dl","meta");
+      if(c.email)dl.append(item("Email",c.email,"mailto:"+c.email));
+      if(c.phone)dl.append(item("Phone",c.phone,"tel:"+c.phone.replace(/[^\d+]/g,"")));
+      if(c.format)dl.append(item("Format",c.format));
+      if(dl.children.length)card.append(dl);
+      const mods=splitMods(c.modalities);
+      if(mods.length){const d=el("div");d.append(el("dt",null,"Modalities"));const pl=el("div","pills");mods.forEach(x=>pl.append(el("span",null,x)));d.append(pl);
+        d.firstChild.style.cssText="font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mauve);font-weight:500";card.append(d);}
+      if(c.notes){const n=el("p","notes");n.append(el("b",null,"Program & notes"),document.createTextNode(c.notes));card.append(n);}
+      const act=el("div","actions"),ed=el("button","btn ghost sm","Edit"),del=el("button","btn ghost sm","Delete");ed.type=del.type="button";
+      ed.addEventListener("click",()=>openEditor(c));
+      del.addEventListener("click",async()=>{if(!confirm("Delete "+(c.name||"this client")+"? This can't be undone."))return;
+        del.disabled=true;try{await api(CLIENTS+"?id=eq."+encodeURIComponent(c.id),{method:"DELETE",headers:{"Prefer":"return=minimal"}});clients=clients.filter(x=>x!==c);renderClients();}
+        catch(x){del.disabled=false;alert("Couldn't delete: "+x.message);}});
+      act.append(ed,del);card.append(act);
+      list.append(card);
+    });
+  }
+
+  function openEditor(c,inq){
+    editing=c||null;fromInquiry=inq||null;const src=c||inq||{};
+    $("c-title").textContent=c?"Edit client":"New client";
+    $("c-name").value=src.name||"";$("c-email").value=src.email||"";$("c-phone").value=src.phone||"";
+    $("c-date").value=(c&&c.retreat_date)||"";
+    const f=$("c-format");f.value=[...f.options].some(o=>o.value===src.format)?src.format:"";
+    $("c-notes").value=c?(c.notes||""):(inq&&inq.goal?"Would like to feel: "+inq.goal+"\n\n":"");
+    const chosen=splitMods(src.modalities),box=$("c-mods");box.replaceChildren();
+    [...MODS,...chosen.filter(x=>!MODS.includes(x))].forEach(name=>{const lab=el("label"),cb=el("input");cb.type="checkbox";cb.value=name;cb.checked=chosen.includes(name);lab.append(cb,document.createTextNode(name));box.append(lab);});
+    $("c-msg").hidden=true;$("c-form").hidden=false;$("c-form").scrollIntoView({behavior:"smooth",block:"start"});$("c-name").focus({preventScroll:true});
+  }
+  function closeEditor(){$("c-form").hidden=true;editing=null;fromInquiry=null;}
+
+  $("c-add").addEventListener("click",()=>openEditor(null));
+  $("c-cancel").addEventListener("click",closeEditor);
+  $("c-form").addEventListener("submit",async e=>{e.preventDefault();
+    const m=$("c-msg"),b=$("c-save"),name=$("c-name").value.trim();
+    if(!name){m.textContent="Please add the client's name.";m.hidden=false;return;}m.hidden=true;
+    const data={name,email:$("c-email").value.trim()||null,phone:$("c-phone").value.trim()||null,retreat_date:$("c-date").value||null,
+      format:$("c-format").value||null,modalities:[...$("c-mods").querySelectorAll("input:checked")].map(x=>x.value).join(", ")||null,notes:$("c-notes").value.trim()||null};
+    b.disabled=true;b.textContent="Saving…";
+    try{
+      const opts={headers:{"Prefer":"return=representation"},body:JSON.stringify(data)};
+      if(editing){const [row]=await api(CLIENTS+"?id=eq."+encodeURIComponent(editing.id),Object.assign({method:"PATCH"},opts));Object.assign(editing,row||data);}
+      else{const [row]=await api(CLIENTS,Object.assign({method:"POST"},opts));clients.unshift(row||data);}
+      const inq=fromInquiry;
+      if(inq&&"contacted" in inq&&!inq.contacted){
+        try{await api(TABLE+"?id=eq."+encodeURIComponent(inq.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:true})});inq.contacted=true;render();}catch(x){}
+      }
+      closeEditor();renderClients();
+    }catch(x){m.textContent="Couldn't save: "+x.message;m.hidden=false;}
+    b.disabled=false;b.textContent="Save client";});
+
+  document.querySelectorAll(".chip[data-cf]").forEach(c=>c.addEventListener("click",()=>{
+    document.querySelectorAll(".chip[data-cf]").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed","true");cfilter=c.dataset.cf;renderClients();}));
+  $("c-q").addEventListener("input",renderClients);
+  $("c-reload").addEventListener("click",fetchClients);
 
   session=load();show(!!session);
 })();

@@ -75,6 +75,19 @@ main{padding-block:clamp(36px,6vw,64px)}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .pills span{font-size:.8125rem;padding:4px 12px;border-radius:999px;background:var(--mist);border:1px solid var(--stone);color:var(--ink)}
+.top-r{display:flex;align-items:center;gap:12px}
+.cat-wrap{position:relative}
+.cat-btn{display:grid;place-items:center;width:30px;height:30px;padding:0;border-radius:50%;border:1.5px solid var(--mauve);background:#fff;color:var(--cream);cursor:pointer;transition:background .2s,border-color .2s}
+.cat-btn.on{background:var(--lagoon);border-color:var(--lagoon)}
+.cat-btn svg{width:15px;height:15px}
+.cat-pop{position:absolute;top:38px;right:0;z-index:4;width:230px;background:#fff;border:1px solid var(--stone);border-radius:16px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;box-shadow:var(--sh-1)}
+.cat-pop label{display:flex;align-items:center;gap:10px;font-size:.9375rem;cursor:pointer}
+.cat-pop input[type=checkbox]{width:18px;height:18px;accent-color:var(--lagoon);flex:none}
+.cat-new{display:flex;gap:6px;border-top:1px solid var(--stone);padding-top:10px;margin-top:2px}
+.cat-new input{font:inherit;font-size:.875rem;min-width:0;width:100%;flex:1;border:1px solid var(--stone);border-radius:999px;padding:7px 12px;background:var(--mist);color:var(--ink)}
+.cat-new button{width:34px;height:34px;flex:none;border-radius:50%;border:1px solid var(--indigo);background:var(--indigo);color:var(--cream);font-size:1.1rem;line-height:1;cursor:pointer}
+.pills.cats{margin-top:-4px}
+.pills.cats span{font-size:.6875rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;background:var(--indigo);border-color:var(--indigo);color:var(--cream)}
 .notes{margin:0;padding:14px 16px;background:var(--cream);border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9375rem}
 .notes b{display:block;font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mauve);font-weight:500;margin-bottom:4px}
 .editor{margin-bottom:18px;scroll-margin-top:90px}
@@ -320,7 +333,7 @@ main{padding-block:clamp(36px,6vw,64px)}
     const q=$("c-q").value.trim().toLowerCase(),list=$("c-list"),t=today();
     const up=c=>!c.retreat_date||c.retreat_date>=t;
     const inView=c=>!c.archived&&(cfilter==="all"||(cfilter==="upcoming")===up(c));
-    const shown=clients.filter(c=>inView(c)&&(!q||[c.name,c.email,c.phone,c.format,c.modalities,c.notes].join(" ").toLowerCase().includes(q)));
+    const shown=clients.filter(c=>inView(c)&&(!q||[c.name,c.email,c.phone,c.format,c.modalities,c.notes,c.categories].join(" ").toLowerCase().includes(q)));
     const active=clients.filter(c=>!c.archived);
     $("c-count").textContent=active.length+" active · "+active.filter(up).length+" upcoming · "+(clients.length-active.length)+" archived";
     list.replaceChildren();
@@ -331,7 +344,9 @@ main{padding-block:clamp(36px,6vw,64px)}
   function clientCard(c,upcoming){
       const card=el("article","inq"+(upcoming&&!c.archived?"":" done"));
       if(c.archived)card.append(el("span","badge ex","No longer a client"));
-      const top=el("div","inq-top");top.append(el("h2",null,c.name||"(no name)"),el("span","when",c.retreat_date?fmtDay(c.retreat_date):"Date not set"));card.append(top);
+      const top=el("div","inq-top"),tr=el("div","top-r");
+      tr.append(el("span","when",c.retreat_date?fmtDay(c.retreat_date):"Date not set"),catPicker(c));
+      top.append(el("h2",null,c.name||"(no name)"),tr);card.append(top,c._pills=el("div","pills cats"));paintCats(c);
       const dl=el("dl","meta");
       if(c.email)dl.append(item("Email",c.email,"mailto:"+c.email));
       if(c.phone)dl.append(item("Phone",c.phone,"tel:"+c.phone.replace(/[^\d+]/g,"")));
@@ -350,13 +365,41 @@ main{padding-block:clamp(36px,6vw,64px)}
       return card;
   }
 
+  // Client categories: tick circle in the card corner (needs a "categories" text column)
+  const CATS=["VIP","RUS","ENG","Serenity Moon"],extraCats=[];
+  const allCats=()=>[...new Set([...CATS,...clients.flatMap(c=>splitMods(c.categories)),...extraCats])];
+  function paintCats(c){const cats=splitMods(c.categories);c._pills.replaceChildren(...cats.map(x=>el("span",null,x)));c._pills.hidden=!cats.length;
+    if(c._btn){c._btn.classList.toggle("on",!!cats.length);c._btn.title=cats.length?cats.join(", "):"Set category";}}
+  function catPicker(c){
+    const wrap=el("div","cat-wrap"),btn=el("button","cat-btn"),pop=el("div","cat-pop");btn.type="button";pop.hidden=true;c._btn=btn;
+    btn.setAttribute("aria-label","Client category");
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+    async function saveCats(list){const v=list.join(", ")||null,old=c.categories;c.categories=v;paintCats(c);
+      try{await api(CLIENTS+"?id=eq."+encodeURIComponent(c.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({categories:v})});}
+      catch(x){c.categories=old;paintCats(c);fill();alert("Couldn't save category: "+x.message);}}
+    function fill(){
+      const cur=splitMods(c.categories);pop.replaceChildren();
+      allCats().forEach(name=>{const lab=el("label"),cb=el("input");cb.type="checkbox";cb.checked=cur.includes(name);
+        cb.addEventListener("change",()=>{const now=splitMods(c.categories).filter(x=>x!==name);if(cb.checked)now.push(name);saveCats(allCats().filter(x=>now.includes(x)));});
+        lab.append(cb,document.createTextNode(name));pop.append(lab);});
+      const row=el("form","cat-new"),inp=el("input"),add=el("button",null,"+");inp.placeholder="Add new…";inp.maxLength=30;add.type="submit";add.setAttribute("aria-label","Add category");
+      row.addEventListener("submit",e=>{e.preventDefault();const name=inp.value.replace(/,/g," ").trim();if(!name)return;
+        if(!allCats().includes(name))extraCats.push(name);const now=splitMods(c.categories);if(!now.includes(name))now.push(name);
+        saveCats(allCats().filter(x=>now.includes(x)));fill();});
+      row.append(inp,add);pop.append(row);
+    }
+    btn.addEventListener("click",()=>{const open=pop.hidden;document.querySelectorAll(".cat-pop").forEach(x=>x.hidden=true);if(open){fill();pop.hidden=false;}});
+    wrap.append(btn,pop);return wrap;
+  }
+  document.addEventListener("click",e=>{if(!e.target.closest(".cat-wrap"))document.querySelectorAll(".cat-pop").forEach(x=>x.hidden=true);});
+
   // Archive: archived inquiries and former clients together, newest first
   function renderArchive(){
     const q=$("r-q").value.trim().toLowerCase(),list=$("r-list");
     const ai=rows.filter(r=>r.archived),ac=clients.filter(c=>c.archived);
     $("r-count").textContent=ai.length+" inquiries · "+ac.length+" former clients";
     const items=[...(rfilter==="cli"?[]:ai.map(r=>({r,kind:"inq",d:r.created_at||""}))),...(rfilter==="inq"?[]:ac.map(r=>({r,kind:"cli",d:r.retreat_date||r.created_at||""})))]
-      .filter(x=>!q||[x.r.name,x.r.email,x.r.phone,x.r.format,x.r.modalities,x.r.goal,x.r.notes].join(" ").toLowerCase().includes(q))
+      .filter(x=>!q||[x.r.name,x.r.email,x.r.phone,x.r.format,x.r.modalities,x.r.goal,x.r.notes,x.r.categories].join(" ").toLowerCase().includes(q))
       .sort((a,b)=>String(b.d).localeCompare(String(a.d)));
     list.replaceChildren();
     if(!items.length){list.append(el("p","empty",ai.length||ac.length?"Nothing here.":"The archive is empty."));return;}

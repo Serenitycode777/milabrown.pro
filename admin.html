@@ -119,6 +119,7 @@ main{padding-block:clamp(36px,6vw,64px)}
         <button class="chip" type="button" data-f="new" aria-pressed="true">New</button>
         <button class="chip" type="button" data-f="done" aria-pressed="false">Contacted</button>
         <button class="chip" type="button" data-f="all" aria-pressed="false">All</button>
+        <button class="chip" type="button" data-f="archive" aria-pressed="false">Archive</button>
         <input class="search" id="q" type="search" placeholder="Search name, email…" aria-label="Search inquiries">
         <button class="btn ghost sm" id="reload" type="button">Refresh</button>
       </div>
@@ -138,6 +139,7 @@ main{padding-block:clamp(36px,6vw,64px)}
         <button class="chip" type="button" data-cf="upcoming" aria-pressed="false">Upcoming</button>
         <button class="chip" type="button" data-cf="past" aria-pressed="false">Past</button>
         <button class="chip" type="button" data-cf="all" aria-pressed="true">All</button>
+        <button class="chip" type="button" data-cf="archive" aria-pressed="false">Archive</button>
         <input class="search" id="c-q" type="search" placeholder="Search clients…" aria-label="Search clients">
         <button class="btn sm" id="c-add" type="button">Add client</button>
         <button class="btn ghost sm" id="c-reload" type="button">Refresh</button>
@@ -226,13 +228,23 @@ main{padding-block:clamp(36px,6vw,64px)}
   function item(label,value,href){const d=el("div");d.append(el("dt",null,label));const dd=el("dd");
     if(href){const a=el("a",null,value);a.href=href;dd.append(a);}else dd.textContent=value;d.append(dd);return d;}
 
+  // Archive / restore toggle shared by inquiries and clients (needs an "archived" boolean column)
+  function archiveBtn(r,table,rerender){
+    const b=el("button","btn ghost sm",r.archived?"Restore":"Archive");b.type="button";
+    b.addEventListener("click",async()=>{b.disabled=true;
+      try{await api(table+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({archived:!r.archived})});r.archived=!r.archived;rerender();}
+      catch(x){b.disabled=false;alert("Couldn't "+(r.archived?"restore":"archive")+": "+x.message);}});
+    return b;
+  }
+
   function render(){
     const q=$("q").value.trim().toLowerCase(),list=$("list");
-    const shown=rows.filter(r=>(filter==="all"||(filter==="done")===!!r.contacted)&&(!q||[r.name,r.email,r.phone,r.format,r.modalities,r.goal].join(" ").toLowerCase().includes(q)));
-    const fresh=rows.filter(r=>!r.contacted).length;
-    $("count").textContent=rows.length+" total · "+fresh+" new";
+    const inView=r=>filter==="archive"?!!r.archived:!r.archived&&(filter==="all"||(filter==="done")===!!r.contacted);
+    const shown=rows.filter(r=>inView(r)&&(!q||[r.name,r.email,r.phone,r.format,r.modalities,r.goal].join(" ").toLowerCase().includes(q)));
+    const active=rows.filter(r=>!r.archived),fresh=active.filter(r=>!r.contacted).length;
+    $("count").textContent=active.length+" active · "+fresh+" new · "+(rows.length-active.length)+" archived";
     list.replaceChildren();
-    if(!shown.length){list.append(el("p","empty",rows.length?"Nothing here.":"No inquiries yet."));return;}
+    if(!shown.length){list.append(el("p","empty",filter==="archive"?"No archived inquiries.":rows.length?"Nothing here.":"No inquiries yet."));return;}
     shown.forEach(r=>{
       const card=el("article","inq"+(r.contacted?" done":""));
       const top=el("div","inq-top");top.append(el("h2",null,r.name||"(no name)"),el("span","when",fmtDate(r.created_at)));card.append(top);
@@ -251,9 +263,9 @@ main{padding-block:clamp(36px,6vw,64px)}
         lab.append(cb,document.createTextNode("Contacted"));
         const row=el("div","actions");row.append(lab);card.append(row);
       }
-      const conf=el("button","btn ghost sm","Confirm as client");conf.type="button";conf.style.justifySelf="start";
+      const conf=el("button","btn ghost sm","Confirm as client");conf.type="button";
       conf.addEventListener("click",()=>{openTab("v-cli");openEditor(null,r);});
-      card.append(conf);
+      const act=el("div","actions");act.append(conf,archiveBtn(r,TABLE,render));card.append(act);
       list.append(card);
     });
   }
@@ -284,10 +296,12 @@ main{padding-block:clamp(36px,6vw,64px)}
   function renderClients(){
     const q=$("c-q").value.trim().toLowerCase(),list=$("c-list"),t=today();
     const up=c=>!c.retreat_date||c.retreat_date>=t;
-    const shown=clients.filter(c=>(cfilter==="all"||(cfilter==="upcoming")===up(c))&&(!q||[c.name,c.email,c.phone,c.format,c.modalities,c.notes].join(" ").toLowerCase().includes(q)));
-    $("c-count").textContent=clients.length+" total · "+clients.filter(up).length+" upcoming";
+    const inView=c=>cfilter==="archive"?!!c.archived:!c.archived&&(cfilter==="all"||(cfilter==="upcoming")===up(c));
+    const shown=clients.filter(c=>inView(c)&&(!q||[c.name,c.email,c.phone,c.format,c.modalities,c.notes].join(" ").toLowerCase().includes(q)));
+    const active=clients.filter(c=>!c.archived);
+    $("c-count").textContent=active.length+" active · "+active.filter(up).length+" upcoming · "+(clients.length-active.length)+" archived";
     list.replaceChildren();
-    if(!shown.length){list.append(el("p","empty",clients.length?"Nothing here.":"No clients yet. Add one, or confirm an inquiry."));return;}
+    if(!shown.length){list.append(el("p","empty",cfilter==="archive"?"No archived clients.":clients.length?"Nothing here.":"No clients yet. Add one, or confirm an inquiry."));return;}
     shown.forEach(c=>{
       const card=el("article","inq"+(up(c)?"":" done"));
       const top=el("div","inq-top");top.append(el("h2",null,c.name||"(no name)"),el("span","when",c.retreat_date?fmtDay(c.retreat_date):"Date not set"));card.append(top);
@@ -305,7 +319,7 @@ main{padding-block:clamp(36px,6vw,64px)}
       del.addEventListener("click",async()=>{if(!confirm("Delete "+(c.name||"this client")+"? This can't be undone."))return;
         del.disabled=true;try{await api(CLIENTS+"?id=eq."+encodeURIComponent(c.id),{method:"DELETE",headers:{"Prefer":"return=minimal"}});clients=clients.filter(x=>x!==c);renderClients();}
         catch(x){del.disabled=false;alert("Couldn't delete: "+x.message);}});
-      act.append(ed,del);card.append(act);
+      act.append(ed,archiveBtn(c,CLIENTS,renderClients),del);card.append(act);
       list.append(card);
     });
   }

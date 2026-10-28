@@ -9,6 +9,8 @@
 <meta property="og:image" content="https://retreat.milabrown.pro/mila.jpg">
 <meta property="og:url" content="https://retreat.milabrown.pro/">
 <meta name="theme-color" content="#5b4b88">
+<link rel="alternate" hreflang="en" href="https://retreat.milabrown.pro/">
+<link rel="alternate" hreflang="ru" href="https://retreat.milabrown.pro/rus/">
 <title>Mila Brown · I AM Retreat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,6 +69,12 @@ a{color:inherit}
 .nav .btn{padding:11px 20px}
 @media (max-width:900px){.nav ul{display:none}}
 .mark,.nav .btn{white-space:nowrap}
+.nav-end{display:flex;align-items:center;gap:12px}
+.lang{display:flex;border:1px solid var(--stone);border-radius:999px;padding:3px;background:rgba(255,255,255,.5)}
+.lang a{font:500 .6875rem var(--body);letter-spacing:.14em;padding:6px 9px;border-radius:999px;text-decoration:none;color:var(--ink-soft);line-height:1}
+.lang a:hover{color:var(--indigo)}
+.lang a[aria-current]{background:var(--indigo);color:var(--cream)}
+@media (max-width:480px){.nav-end{gap:8px}.lang a{padding:6px 7px;letter-spacing:.08em}}
 @media (max-width:480px){.nav .btn{padding:10px 14px;letter-spacing:.1em;font-size:.6875rem}.mark{font-size:1.15rem;letter-spacing:.1em}.mark small{display:none}}
 
 /* hero */
@@ -456,7 +464,10 @@ footer .mark{color:var(--cream)}
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#about">About</a></li>
     </ul>
-    <a class="btn" href="#book">Discovery call</a>
+    <div class="nav-end">
+      <div class="lang" role="group" aria-label="Language"><a href="./" lang="en" aria-current="page">EN</a><a href="rus/" lang="ru" hreflang="ru">RU</a></div>
+      <a class="btn" href="#book">Discovery call</a>
+    </div>
   </div>
 </nav>
 

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#5b4b88">
+<title>Inquiries · Mila Brown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap">
+<style>
+/* Private admin: same palette and type as the retreat site. Data access is guarded by Supabase
+   row level security (only the signed-in admin account can read or update inquiries). */
+:root{
+  --indigo:#5b4b88;--lagoon:#336575;--aqua:#57a7ac;--mauve:#ab9fa7;--mist:#f1eef0;--stone:#d8d7d9;--cream:#faf2dd;--ink:#2e2840;--ink-soft:#5f5870;
+  --display:"Cormorant Garamond", "Cormorant", Garamond, "Times New Roman", serif;
+  --body:"Jost", "Futura", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --sh-1:0 1px 1px rgba(46,40,64,.04),0 2px 4px rgba(46,40,64,.05),0 10px 20px -6px rgba(46,40,64,.08),0 28px 50px -18px rgba(91,75,136,.22);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--mist);color:var(--ink);font-family:var(--body);font-weight:300;font-size:1rem;line-height:1.6;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+.wrap{max-width:1160px;margin-inline:auto;padding-inline:clamp(16px,4vw,40px)}
+h1,h2{font-family:var(--display);font-weight:400;color:var(--indigo);margin:0;line-height:1.1}
+h1{font-size:clamp(2.2rem,5vw,3.2rem)}
+.eyebrow{font-size:.8125rem;letter-spacing:.22em;text-transform:uppercase;font-weight:500;color:var(--mauve);margin:0}
+.nav{position:sticky;top:0;z-index:5;background:rgba(241,238,240,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--stone)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px}
+.mark{font-family:var(--display);font-size:1.4rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--indigo);white-space:nowrap}
+.mark small{font-family:var(--body);font-size:.625rem;letter-spacing:.3em;color:var(--mauve);margin-left:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:500 .8125rem var(--body);letter-spacing:.18em;text-transform:uppercase;text-decoration:none;padding:14px 24px;border-radius:999px;border:1px solid var(--indigo);background:var(--indigo);color:var(--cream);cursor:pointer;transition:background .25s,color .25s,border-color .25s}
+.btn:hover{background:var(--lagoon);border-color:var(--lagoon)}
+.btn.ghost{background:transparent;color:var(--indigo)}
+.btn.ghost:hover{background:var(--indigo);color:var(--cream)}
+.btn.sm{padding:10px 16px;font-size:.6875rem}
+.btn:disabled{opacity:.6;cursor:default}
+main{padding-block:clamp(36px,6vw,64px)}
+.card{background:#fff;border:1px solid var(--stone);border-radius:24px;padding:clamp(24px,4vw,36px);display:grid;gap:18px;box-shadow:var(--sh-1)}
+.login{max-width:440px;margin:clamp(20px,6vw,60px) auto 0}
+.field{display:grid;gap:6px}
+.field label{font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mauve);font-weight:500}
+.field input{font:inherit;font-weight:400;color:var(--ink);background:var(--mist);border:1px solid var(--stone);border-radius:12px;padding:13px 14px;width:100%}
+.field input:focus{outline:2px solid var(--aqua);outline-offset:1px}
+.msg{font-size:.875rem;margin:0;color:#9a3b5b}
+.head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:18px;margin-bottom:24px}
+.head>div:first-child{display:grid;gap:10px}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.chip{font:500 .75rem var(--body);letter-spacing:.14em;text-transform:uppercase;padding:9px 16px;border-radius:999px;border:1px solid var(--stone);background:transparent;color:var(--ink-soft);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--lagoon);border-color:var(--lagoon);color:var(--cream)}
+.search{font:inherit;font-weight:400;color:var(--ink);background:#fff;border:1px solid var(--stone);border-radius:999px;padding:9px 16px;min-width:0;width:220px;max-width:100%}
+.list{display:grid;gap:14px}
+.inq{background:#fff;border:1px solid var(--stone);border-radius:22px;padding:22px clamp(18px,3vw,28px);display:grid;gap:12px;box-shadow:var(--sh-1)}
+.inq.done{background:#fbf9fc;opacity:.78}
+.inq-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px}
+.inq h2{font-size:1.6rem}
+.when{font-size:.8125rem;color:var(--mauve);letter-spacing:.04em}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 24px;margin:0}
+.meta div{min-width:0}
+.meta dt{font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mauve);font-weight:500}
+.meta dd{margin:0;overflow-wrap:anywhere}
+.meta a{color:var(--indigo);text-underline-offset:3px}
+.goal{margin:0;padding:12px 16px;background:var(--cream);border-radius:14px;font-family:var(--display);font-style:italic;font-size:1.15rem;color:var(--ink)}
+.status{display:flex;align-items:center;gap:10px;font-size:.875rem;color:var(--ink-soft);cursor:pointer;justify-self:start}
+.status input{width:18px;height:18px;accent-color:var(--lagoon);cursor:pointer}
+.empty{text-align:center;color:var(--ink-soft);padding:40px 0}
+.count{font-size:.875rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="wrap">
+    <a class="mark" href="./">Mila Brown<small>admin</small></a>
+    <button class="btn ghost sm" id="out" type="button" hidden>Sign out</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <form class="card login" id="login" hidden novalidate>
+    <p class="eyebrow">Private</p>
+    <h1>Sign in</h1>
+    <div class="field"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
+    <p class="msg" id="l-msg" hidden></p>
+    <button class="btn" id="l-btn" type="submit">Sign in</button>
+  </form>
+
+  <section id="admin" hidden>
+    <div class="head">
+      <div>
+        <p class="eyebrow">Booking requests</p>
+        <h1>Inquiries</h1>
+        <p class="count" id="count"></p>
+      </div>
+      <div class="tools">
+        <button class="chip" type="button" data-f="new" aria-pressed="true">New</button>
+        <button class="chip" type="button" data-f="done" aria-pressed="false">Contacted</button>
+        <button class="chip" type="button" data-f="all" aria-pressed="false">All</button>
+        <input class="search" id="q" type="search" placeholder="Search name, email…" aria-label="Search inquiries">
+        <button class="btn ghost sm" id="reload" type="button">Refresh</button>
+      </div>
+    </div>
+    <p class="msg" id="a-msg" hidden></p>
+    <div class="list" id="list"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  // Publishable key is public by design; row level security decides what a signed-in user may see.
+  const SB_URL="https://sldavkemqnsruvgghnbm.supabase.co",SB_KEY="sb_publishable_CqLtNh6mFW-VVRP0P23_jA_D-UUrkVr",TABLE="inquiries",STORE="mb-admin-session";
+  const $=id=>document.getElementById(id);
+  let session=null,rows=[],filter="new";
+
+  const load=()=>{try{return JSON.parse(localStorage.getItem(STORE));}catch(e){return null;}};
+  const save=s=>{session=s;try{s?localStorage.setItem(STORE,JSON.stringify(s)):localStorage.removeItem(STORE);}catch(e){}};
+
+  async function auth(grant,body){
+    const r=await fetch(SB_URL+"/auth/v1/token?grant_type="+grant,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error_description||d.msg||"Sign-in failed");
+    return {access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Date.now()+(d.expires_in||3600)*1000};
+  }
+  async function token(){
+    if(session&&Date.now()>session.expires_at-60000){
+      try{save(await auth("refresh_token",{refresh_token:session.refresh_token}));}catch(e){save(null);}
+    }
+    return session&&session.access_token;
+  }
+  async function api(path,opts={}){
+    const t=await token();if(!t){show(false);throw new Error("signed out");}
+    const r=await fetch(SB_URL+"/rest/v1/"+path,Object.assign({},opts,{headers:Object.assign({"apikey":SB_KEY,"Authorization":"Bearer "+t,"Content-Type":"application/json"},opts.headers||{})}));
+    if(r.status===401){save(null);show(false);throw new Error("signed out");}
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||("Error "+r.status));}
+    return r.status===204?null:r.json();
+  }
+
+  function show(inside){$("login").hidden=inside;$("admin").hidden=!inside;$("out").hidden=!inside;if(inside)fetchRows();}
+
+  $("login").addEventListener("submit",async e=>{e.preventDefault();
+    const m=$("l-msg"),b=$("l-btn");m.hidden=true;b.disabled=true;b.textContent="Signing in…";
+    try{save(await auth("password",{email:$("l-email").value.trim(),password:$("l-pass").value}));$("l-pass").value="";show(true);}
+    catch(x){m.textContent=/invalid/i.test(x.message)?"Email or password is incorrect.":x.message;m.hidden=false;}
+    b.disabled=false;b.textContent="Sign in";});
+
+  $("out").addEventListener("click",async()=>{
+    const t=session&&session.access_token;save(null);rows=[];$("list").replaceChildren();show(false);
+    if(t)fetch(SB_URL+"/auth/v1/logout",{method:"POST",headers:{"apikey":SB_KEY,"Authorization":"Bearer "+t}}).catch(()=>{});});
+
+  async function fetchRows(){
+    const m=$("a-msg");m.hidden=true;$("count").textContent="Loading…";
+    try{
+      try{rows=await api(TABLE+"?select=*&order=created_at.desc");}
+      catch(x){if(/signed out/.test(x.message))throw x;rows=(await api(TABLE+"?select=*")).reverse();}
+      render();
+    }catch(x){if(!/signed out/.test(x.message)){m.textContent="Couldn't load inquiries: "+x.message;m.hidden=false;$("count").textContent="";}}
+  }
+
+  const fmtDate=v=>{const d=new Date(v);return isNaN(d)?"":d.toLocaleString([], {weekday:"short",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});};
+  function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  function item(label,value,href){const d=el("div");d.append(el("dt",null,label));const dd=el("dd");
+    if(href){const a=el("a",null,value);a.href=href;dd.append(a);}else dd.textContent=value;d.append(dd);return d;}
+
+  function render(){
+    const q=$("q").value.trim().toLowerCase(),list=$("list");
+    const shown=rows.filter(r=>(filter==="all"||(filter==="done")===!!r.contacted)&&(!q||[r.name,r.email,r.phone,r.format,r.modalities,r.goal].join(" ").toLowerCase().includes(q)));
+    const fresh=rows.filter(r=>!r.contacted).length;
+    $("count").textContent=rows.length+" total · "+fresh+" new";
+    list.replaceChildren();
+    if(!shown.length){list.append(el("p","empty",rows.length?"Nothing here.":"No inquiries yet."));return;}
+    shown.forEach(r=>{
+      const card=el("article","inq"+(r.contacted?" done":""));
+      const top=el("div","inq-top");top.append(el("h2",null,r.name||"(no name)"),el("span","when",fmtDate(r.created_at)));card.append(top);
+      const dl=el("dl","meta");
+      if(r.email)dl.append(item("Email",r.email,"mailto:"+r.email));
+      if(r.phone)dl.append(item("Phone",r.phone,"tel:"+r.phone.replace(/[^\d+]/g,"")));
+      if(r.format)dl.append(item("Format",r.format));
+      dl.append(item("Modalities",r.modalities||"Open to suggestions"));
+      card.append(dl);
+      if(r.goal)card.append(el("p","goal","“"+r.goal+"”"));
+      if("contacted" in r){
+        const lab=el("label","status"),cb=el("input");cb.type="checkbox";cb.checked=!!r.contacted;
+        cb.addEventListener("change",async()=>{cb.disabled=true;
+          try{await api(TABLE+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:cb.checked})});r.contacted=cb.checked;render();}
+          catch(x){cb.checked=!cb.checked;cb.disabled=false;alert("Couldn't update: "+x.message);}});
+        lab.append(cb,document.createTextNode("Contacted"));card.append(lab);
+      }
+      list.append(card);
+    });
+  }
+
+  document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed","true");filter=c.dataset.f;render();}));
+  $("q").addEventListener("input",render);
+  $("reload").addEventListener("click",fetchRows);
+
+  session=load();show(!!session);
+})();
+</script>
+</body>
+</html>

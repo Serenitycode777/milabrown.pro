@@ -204,7 +204,7 @@ blockquote{margin:0;font-family:var(--display);font-style:italic;font-size:clamp
 .picked{font-size:.9375rem;color:var(--ink-soft)}
 .picked b{color:var(--lagoon);font-weight:500}
 .done{background:var(--cream);border-radius:14px;padding:18px;font-size:.9375rem;display:grid;gap:10px}
-.done pre{white-space:pre-wrap;font:inherit;margin:0;color:var(--ink)}
+.done[hidden]{display:none}
 .contact{display:grid;gap:14px}
 .c-line{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid var(--stone)}
 .c-line div{display:grid;min-width:0}
@@ -736,13 +736,11 @@ footer .mark{color:var(--cream)}
           <div class="field"><label for="f-goal">What would you like to feel?</label><textarea id="f-goal" placeholder="Rested, clear, reconnected…"></textarea></div>
           <p class="picked" id="picked">Modalities: <b>none selected yet</b></p>
           <p id="err" style="color:#9a3b5b;font-size:.875rem" hidden>Please add your name and a valid email.</p>
-          <button class="btn" type="submit" style="justify-content:center">Prepare my request</button>
+          <button class="btn" type="submit" id="f-submit" style="justify-content:center">Submit</button>
         </div>
       </form>
       <div class="done" id="done" hidden>
-        <p><b style="color:var(--indigo)">Your request is ready.</b> Copy it and send it to Mila by email or text, and she'll reply to set up your call.</p>
-        <pre id="summary"></pre>
-        <button class="copy" id="copy-summary" type="button" style="justify-self:start">Copy request</button>
+        <p><b style="color:var(--indigo)">Thank you, your request has been sent.</b> Mila will reply soon to set up your discovery call.</p>
       </div>
     </div>
     <div class="contact">
@@ -846,21 +844,29 @@ footer .mark{color:var(--cream)}
 
   function copy(text,btn){const ok=()=>{const t=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=t,1600);};
     try{navigator.clipboard.writeText(text).then(ok).catch(()=>fallback());}catch(e){fallback();}
-    function fallback(){const r=document.createRange();const el=btn.previousElementSibling&&btn.previousElementSibling.querySelector("b")||document.getElementById("summary");r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="Selected";}}
+    function fallback(){const r=document.createRange();const el=btn.previousElementSibling&&btn.previousElementSibling.querySelector("b");r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent="Selected";}}
   document.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",()=>copy(b.dataset.copy,b)));
 
   const form=document.getElementById("form");
-  form.addEventListener("submit",e=>{e.preventDefault();
-    const name=document.getElementById("f-name").value.trim(),email=document.getElementById("f-email").value.trim();
-    const err=document.getElementById("err");
-    if(!name||!/^\S+@\S+\.\S+$/.test(email)){err.hidden=false;return;}err.hidden=true;
+  // Booking requests go straight to Supabase (publishable key: insert-only via row level security)
+  const SB_URL="https://sldavkemqnsruvgghnbm.supabase.co",SB_KEY="sb_publishable_CqLtNh6mFW-VVRP0P23_jA_D-UUrkVr";
+  form.addEventListener("submit",async e=>{e.preventDefault();
+    const val=id=>document.getElementById(id).value.trim();
+    const name=val("f-name"),email=val("f-email");
+    const err=document.getElementById("err"),btn=document.getElementById("f-submit");
+    if(!name||!/^\S+@\S+\.\S+$/.test(email)){err.textContent="Please add your name and a valid email.";err.hidden=false;return;}err.hidden=true;
     const names=[...sel].sort((a,b)=>a-b).map(i=>M[i][0]);
-    const s="Hi Mila, I'd like to book a discovery call.\nName: "+name+"\nEmail: "+email+
-      (document.getElementById("f-phone").value.trim()?"\nPhone: "+document.getElementById("f-phone").value.trim():"")+
-      "\nFormat: "+fmt.value+"\nModalities: "+(names.length?names.join(", "):"open to your suggestions")+
-      (document.getElementById("f-goal").value.trim()?"\nI'd like to feel: "+document.getElementById("f-goal").value.trim():"");
-    document.getElementById("summary").textContent=s;document.getElementById("done").hidden=false;});
-  document.getElementById("copy-summary").addEventListener("click",e=>copy(document.getElementById("summary").textContent,e.currentTarget));
+    btn.disabled=true;btn.textContent="Sending…";
+    try{
+      const r=await fetch(SB_URL+"/rest/v1/inquiries",{method:"POST",
+        headers:{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({name,email,phone:val("f-phone")||null,format:fmt.value,goal:val("f-goal")||null,modalities:names.join(", ")||null})});
+      if(!r.ok)throw new Error(r.status);
+      form.hidden=true;document.getElementById("done").hidden=false;
+    }catch(x){
+      err.textContent="Sorry, something went wrong. Please try again, or call or email Mila directly.";err.hidden=false;
+      btn.disabled=false;btn.textContent="Submit";}
+  });
 })();
 
 /* Hover spotlight: lift the card under the cursor, soften the rest; always cleared when the cursor leaves */

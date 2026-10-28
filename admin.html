@@ -55,6 +55,9 @@ main{padding-block:clamp(36px,6vw,64px)}
 .inq.done{background:#fbf9fc;opacity:.78}
 .inq-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px}
 .inq h2{font-size:1.6rem}
+.inq h2.gone{text-decoration:line-through;text-decoration-thickness:1px;color:var(--mauve)}
+.badge{display:inline-block;font:500 .6875rem var(--body);letter-spacing:.16em;text-transform:uppercase;padding:5px 12px;border-radius:999px;background:var(--stone);color:var(--ink-soft);justify-self:start}
+.badge.ex{background:#f3e3e8;color:#9a3b5b}
 .when{font-size:.8125rem;color:var(--mauve);letter-spacing:.04em}
 .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 24px;margin:0}
 .meta div{min-width:0}
@@ -106,6 +109,7 @@ main{padding-block:clamp(36px,6vw,64px)}
   <div class="tabs" role="tablist">
     <button class="tab" type="button" role="tab" data-view="v-inq" aria-selected="true">Inquiries</button>
     <button class="tab" type="button" role="tab" data-view="v-cli" aria-selected="false">Clients</button>
+    <button class="tab" type="button" role="tab" data-view="v-arc" aria-selected="false">Archive</button>
   </div>
 
   <section id="v-inq">
@@ -119,7 +123,6 @@ main{padding-block:clamp(36px,6vw,64px)}
         <button class="chip" type="button" data-f="new" aria-pressed="true">New</button>
         <button class="chip" type="button" data-f="done" aria-pressed="false">Contacted</button>
         <button class="chip" type="button" data-f="all" aria-pressed="false">All</button>
-        <button class="chip" type="button" data-f="archive" aria-pressed="false">Archive</button>
         <input class="search" id="q" type="search" placeholder="Search name, email…" aria-label="Search inquiries">
         <button class="btn ghost sm" id="reload" type="button">Refresh</button>
       </div>
@@ -139,7 +142,6 @@ main{padding-block:clamp(36px,6vw,64px)}
         <button class="chip" type="button" data-cf="upcoming" aria-pressed="false">Upcoming</button>
         <button class="chip" type="button" data-cf="past" aria-pressed="false">Past</button>
         <button class="chip" type="button" data-cf="all" aria-pressed="true">All</button>
-        <button class="chip" type="button" data-cf="archive" aria-pressed="false">Archive</button>
         <input class="search" id="c-q" type="search" placeholder="Search clients…" aria-label="Search clients">
         <button class="btn sm" id="c-add" type="button">Add client</button>
         <button class="btn ghost sm" id="c-reload" type="button">Refresh</button>
@@ -168,6 +170,23 @@ main{padding-block:clamp(36px,6vw,64px)}
     <p class="msg" id="c-amsg" hidden></p>
     <div class="list" id="c-list"></div>
   </section>
+
+  <section id="v-arc" hidden>
+    <div class="head">
+      <div>
+        <p class="eyebrow">No longer active</p>
+        <h1>Archive</h1>
+        <p class="count" id="r-count"></p>
+      </div>
+      <div class="tools">
+        <button class="chip" type="button" data-rf="all" aria-pressed="true">All</button>
+        <button class="chip" type="button" data-rf="inq" aria-pressed="false">Inquiries</button>
+        <button class="chip" type="button" data-rf="cli" aria-pressed="false">Former clients</button>
+        <input class="search" id="r-q" type="search" placeholder="Search archive…" aria-label="Search archive">
+      </div>
+    </div>
+    <div class="list" id="r-list"></div>
+  </section>
   </div>
 </main>
 
@@ -177,7 +196,7 @@ main{padding-block:clamp(36px,6vw,64px)}
   const SB_URL="https://sldavkemqnsruvgghnbm.supabase.co",SB_KEY="sb_publishable_CqLtNh6mFW-VVRP0P23_jA_D-UUrkVr",TABLE="inquiries",CLIENTS="milabrownclients",STORE="mb-admin-session";
   const MODS=["VedaPulse diagnostics","Vedic Astrology (Jyotish)","Coaching & mastermind","Ayurveda","Kundalini Yoga","Sadhu Board","Amethyst Mat + Photon Therapy","Infrared Sauna","Breathwork & pranayama","Meditation","Sound Healing Bath","Aromatherapy","Nature Bathing","Sacred Geometry art"];
   const $=id=>document.getElementById(id);
-  let session=null,rows=[],filter="new",clients=[],cfilter="all",editing=null,fromInquiry=null;
+  let session=null,rows=[],filter="new",clients=[],cfilter="all",rfilter="all",editing=null,fromInquiry=null;
 
   const load=()=>{try{return JSON.parse(localStorage.getItem(STORE));}catch(e){return null;}};
   const save=s=>{session=s;try{s?localStorage.setItem(STORE,JSON.stringify(s)):localStorage.removeItem(STORE);}catch(e){}};
@@ -219,7 +238,7 @@ main{padding-block:clamp(36px,6vw,64px)}
     try{
       try{rows=await api(TABLE+"?select=*&order=created_at.desc");}
       catch(x){if(/signed out/.test(x.message))throw x;rows=(await api(TABLE+"?select=*")).reverse();}
-      render();
+      renderAll();
     }catch(x){if(!/signed out/.test(x.message)){m.textContent="Couldn't load inquiries: "+x.message;m.hidden=false;$("count").textContent="";}}
   }
 
@@ -229,25 +248,30 @@ main{padding-block:clamp(36px,6vw,64px)}
     if(href){const a=el("a",null,value);a.href=href;dd.append(a);}else dd.textContent=value;d.append(dd);return d;}
 
   // Archive / restore toggle shared by inquiries and clients (needs an "archived" boolean column)
-  function archiveBtn(r,table,rerender){
+  const renderAll=()=>{render();renderClients();renderArchive();};
+  function archiveBtn(r,table){
     const b=el("button","btn ghost sm",r.archived?"Restore":"Archive");b.type="button";
     b.addEventListener("click",async()=>{b.disabled=true;
-      try{await api(table+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({archived:!r.archived})});r.archived=!r.archived;rerender();}
+      try{await api(table+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({archived:!r.archived})});r.archived=!r.archived;renderAll();}
       catch(x){b.disabled=false;alert("Couldn't "+(r.archived?"restore":"archive")+": "+x.message);}});
     return b;
   }
 
   function render(){
     const q=$("q").value.trim().toLowerCase(),list=$("list");
-    const inView=r=>filter==="archive"?!!r.archived:!r.archived&&(filter==="all"||(filter==="done")===!!r.contacted);
+    const inView=r=>!r.archived&&(filter==="all"||(filter==="done")===!!r.contacted);
     const shown=rows.filter(r=>inView(r)&&(!q||[r.name,r.email,r.phone,r.format,r.modalities,r.goal].join(" ").toLowerCase().includes(q)));
     const active=rows.filter(r=>!r.archived),fresh=active.filter(r=>!r.contacted).length;
     $("count").textContent=active.length+" active · "+fresh+" new · "+(rows.length-active.length)+" archived";
     list.replaceChildren();
-    if(!shown.length){list.append(el("p","empty",filter==="archive"?"No archived inquiries.":rows.length?"Nothing here.":"No inquiries yet."));return;}
-    shown.forEach(r=>{
-      const card=el("article","inq"+(r.contacted?" done":""));
-      const top=el("div","inq-top");top.append(el("h2",null,r.name||"(no name)"),el("span","when",fmtDate(r.created_at)));card.append(top);
+    if(!shown.length){list.append(el("p","empty",rows.length?"Nothing here.":"No inquiries yet."));return;}
+    shown.forEach(r=>list.append(inqCard(r)));
+  }
+
+  function inqCard(r){
+      const card=el("article","inq"+(r.contacted||r.archived?" done":""));
+      if(r.archived)card.append(el("span","badge","Archived inquiry"));
+      const top=el("div","inq-top");top.append(el("h2",r.archived?"gone":null,r.name||"(no name)"),el("span","when",fmtDate(r.created_at)));card.append(top);
       const dl=el("dl","meta");
       if(r.email)dl.append(item("Email",r.email,"mailto:"+r.email));
       if(r.phone)dl.append(item("Phone",r.phone,"tel:"+r.phone.replace(/[^\d+]/g,"")));
@@ -258,16 +282,15 @@ main{padding-block:clamp(36px,6vw,64px)}
       if("contacted" in r){
         const lab=el("label","status"),cb=el("input");cb.type="checkbox";cb.checked=!!r.contacted;
         cb.addEventListener("change",async()=>{cb.disabled=true;
-          try{await api(TABLE+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:cb.checked})});r.contacted=cb.checked;render();}
+          try{await api(TABLE+"?id=eq."+encodeURIComponent(r.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:cb.checked})});r.contacted=cb.checked;renderAll();}
           catch(x){cb.checked=!cb.checked;cb.disabled=false;alert("Couldn't update: "+x.message);}});
         lab.append(cb,document.createTextNode("Contacted"));
         const row=el("div","actions");row.append(lab);card.append(row);
       }
       const conf=el("button","btn ghost sm","Confirm as client");conf.type="button";
       conf.addEventListener("click",()=>{openTab("v-cli");openEditor(null,r);});
-      const act=el("div","actions");act.append(conf,archiveBtn(r,TABLE,render));card.append(act);
-      list.append(card);
-    });
+      const act=el("div","actions");act.append(conf,archiveBtn(r,TABLE));card.append(act);
+      return card;
   }
 
   document.querySelectorAll(".chip[data-f]").forEach(c=>c.addEventListener("click",()=>{
@@ -289,21 +312,25 @@ main{padding-block:clamp(36px,6vw,64px)}
     try{
       try{clients=await api(CLIENTS+"?select=*&order=retreat_date.desc.nullsfirst,created_at.desc");}
       catch(x){if(/signed out/.test(x.message))throw x;clients=(await api(CLIENTS+"?select=*")).reverse();}
-      renderClients();
+      renderAll();
     }catch(x){if(!/signed out/.test(x.message)){m.textContent="Couldn't load clients: "+x.message;m.hidden=false;$("c-count").textContent="";}}
   }
 
   function renderClients(){
     const q=$("c-q").value.trim().toLowerCase(),list=$("c-list"),t=today();
     const up=c=>!c.retreat_date||c.retreat_date>=t;
-    const inView=c=>cfilter==="archive"?!!c.archived:!c.archived&&(cfilter==="all"||(cfilter==="upcoming")===up(c));
+    const inView=c=>!c.archived&&(cfilter==="all"||(cfilter==="upcoming")===up(c));
     const shown=clients.filter(c=>inView(c)&&(!q||[c.name,c.email,c.phone,c.format,c.modalities,c.notes].join(" ").toLowerCase().includes(q)));
     const active=clients.filter(c=>!c.archived);
     $("c-count").textContent=active.length+" active · "+active.filter(up).length+" upcoming · "+(clients.length-active.length)+" archived";
     list.replaceChildren();
-    if(!shown.length){list.append(el("p","empty",cfilter==="archive"?"No archived clients.":clients.length?"Nothing here.":"No clients yet. Add one, or confirm an inquiry."));return;}
-    shown.forEach(c=>{
-      const card=el("article","inq"+(up(c)?"":" done"));
+    if(!shown.length){list.append(el("p","empty",clients.length?"Nothing here.":"No clients yet. Add one, or confirm an inquiry."));return;}
+    shown.forEach(c=>list.append(clientCard(c,up(c))));
+  }
+
+  function clientCard(c,upcoming){
+      const card=el("article","inq"+(upcoming&&!c.archived?"":" done"));
+      if(c.archived)card.append(el("span","badge ex","No longer a client"));
       const top=el("div","inq-top");top.append(el("h2",null,c.name||"(no name)"),el("span","when",c.retreat_date?fmtDay(c.retreat_date):"Date not set"));card.append(top);
       const dl=el("dl","meta");
       if(c.email)dl.append(item("Email",c.email,"mailto:"+c.email));
@@ -317,12 +344,27 @@ main{padding-block:clamp(36px,6vw,64px)}
       const act=el("div","actions"),ed=el("button","btn ghost sm","Edit"),del=el("button","btn ghost sm","Delete");ed.type=del.type="button";
       ed.addEventListener("click",()=>openEditor(c));
       del.addEventListener("click",async()=>{if(!confirm("Delete "+(c.name||"this client")+"? This can't be undone."))return;
-        del.disabled=true;try{await api(CLIENTS+"?id=eq."+encodeURIComponent(c.id),{method:"DELETE",headers:{"Prefer":"return=minimal"}});clients=clients.filter(x=>x!==c);renderClients();}
+        del.disabled=true;try{await api(CLIENTS+"?id=eq."+encodeURIComponent(c.id),{method:"DELETE",headers:{"Prefer":"return=minimal"}});clients=clients.filter(x=>x!==c);renderAll();}
         catch(x){del.disabled=false;alert("Couldn't delete: "+x.message);}});
-      act.append(ed,archiveBtn(c,CLIENTS,renderClients),del);card.append(act);
-      list.append(card);
-    });
+      act.append(ed,archiveBtn(c,CLIENTS),del);card.append(act);
+      return card;
   }
+
+  // Archive: archived inquiries and former clients together, newest first
+  function renderArchive(){
+    const q=$("r-q").value.trim().toLowerCase(),list=$("r-list");
+    const ai=rows.filter(r=>r.archived),ac=clients.filter(c=>c.archived);
+    $("r-count").textContent=ai.length+" inquiries · "+ac.length+" former clients";
+    const items=[...(rfilter==="cli"?[]:ai.map(r=>({r,kind:"inq",d:r.created_at||""}))),...(rfilter==="inq"?[]:ac.map(r=>({r,kind:"cli",d:r.retreat_date||r.created_at||""})))]
+      .filter(x=>!q||[x.r.name,x.r.email,x.r.phone,x.r.format,x.r.modalities,x.r.goal,x.r.notes].join(" ").toLowerCase().includes(q))
+      .sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+    list.replaceChildren();
+    if(!items.length){list.append(el("p","empty",ai.length||ac.length?"Nothing here.":"The archive is empty."));return;}
+    items.forEach(x=>list.append(x.kind==="inq"?inqCard(x.r):clientCard(x.r,false)));
+  }
+  document.querySelectorAll(".chip[data-rf]").forEach(c=>c.addEventListener("click",()=>{
+    document.querySelectorAll(".chip[data-rf]").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed","true");rfilter=c.dataset.rf;renderArchive();}));
+  $("r-q").addEventListener("input",renderArchive);
 
   function openEditor(c,inq){
     editing=c||null;fromInquiry=inq||null;const src=c||inq||{};
@@ -351,9 +393,9 @@ main{padding-block:clamp(36px,6vw,64px)}
       else{const [row]=await api(CLIENTS,Object.assign({method:"POST"},opts));clients.unshift(row||data);}
       const inq=fromInquiry;
       if(inq&&"contacted" in inq&&!inq.contacted){
-        try{await api(TABLE+"?id=eq."+encodeURIComponent(inq.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:true})});inq.contacted=true;render();}catch(x){}
+        try{await api(TABLE+"?id=eq."+encodeURIComponent(inq.id),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({contacted:true})});inq.contacted=true;}catch(x){}
       }
-      closeEditor();renderClients();
+      closeEditor();renderAll();
     }catch(x){m.textContent="Couldn't save: "+x.message;m.hidden=false;}
     b.disabled=false;b.textContent="Save client";});
 

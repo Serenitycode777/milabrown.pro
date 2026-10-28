@@ -166,6 +166,7 @@ main{padding-block:clamp(36px,6vw,64px)}
       <div class="row2">
         <div class="field"><label for="c-name">Name</label><input id="c-name" required></div>
         <div class="field"><label for="c-date">Retreat date</label><input id="c-date" type="date"></div>
+        <div class="field"><label for="c-since">Client since</label><input id="c-since" type="date"></div>
         <div class="field"><label for="c-email">Email</label><input id="c-email" type="email"></div>
         <div class="field"><label for="c-phone">Phone</label><input id="c-phone" type="tel"></div>
         <div class="field"><label for="c-format">Format</label>
@@ -348,6 +349,7 @@ main{padding-block:clamp(36px,6vw,64px)}
       tr.append(el("span","when",c.retreat_date?fmtDay(c.retreat_date):"Date not set"),catPicker(c));
       top.append(el("h2",null,c.name||"(no name)"),tr);card.append(top,c._pills=el("div","pills cats"));paintCats(c);
       const dl=el("dl","meta");
+      if(c.client_since)dl.append(item("Client since",fmtDay(c.client_since)));
       if(c.email)dl.append(item("Email",c.email,"mailto:"+c.email));
       if(c.phone)dl.append(item("Phone",c.phone,"tel:"+c.phone.replace(/[^\d+]/g,"")));
       if(c.format)dl.append(item("Format",c.format));
@@ -414,6 +416,7 @@ main{padding-block:clamp(36px,6vw,64px)}
     $("c-title").textContent=c?"Edit client":"New client";
     $("c-name").value=src.name||"";$("c-email").value=src.email||"";$("c-phone").value=src.phone||"";
     $("c-date").value=(c&&c.retreat_date)||"";
+    $("c-since").value=c?(c.client_since||""):today();
     const f=$("c-format");f.value=[...f.options].some(o=>o.value===src.format)?src.format:"";
     $("c-notes").value=c?(c.notes||""):(inq&&inq.goal?"Would like to feel: "+inq.goal+"\n\n":"");
     const chosen=splitMods(src.modalities),box=$("c-mods");box.replaceChildren();
@@ -427,7 +430,7 @@ main{padding-block:clamp(36px,6vw,64px)}
   $("c-form").addEventListener("submit",async e=>{e.preventDefault();
     const m=$("c-msg"),b=$("c-save"),name=$("c-name").value.trim();
     if(!name){m.textContent="Please add the client's name.";m.hidden=false;return;}m.hidden=true;
-    const data={name,email:$("c-email").value.trim()||null,phone:$("c-phone").value.trim()||null,retreat_date:$("c-date").value||null,
+    const data={name,email:$("c-email").value.trim()||null,phone:$("c-phone").value.trim()||null,retreat_date:$("c-date").value||null,client_since:$("c-since").value||null,
       format:$("c-format").value||null,modalities:[...$("c-mods").querySelectorAll("input:checked")].map(x=>x.value).join(", ")||null,notes:$("c-notes").value.trim()||null};
     b.disabled=true;b.textContent="Saving…";
     try{
